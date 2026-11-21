@@ -178,16 +178,16 @@ class UniversalScraper:
         },
         "pickaboo.com": {
             "name": "pickaboo.com",
-            "item_selector": ".product-item, .product-card",
+            "item_selector": "a[href*='/product-detail/'], .product-item, .product-card",
             "fields": {
-                "name": {"selector": ".product-name, .title", "attr": "text"},
-                "url": {"selector": "a.product-item-link, a", "attr": "href"},
-                "price": {"selector": ".special-price .price, .price", "attr": "text"},
-                "image": {"selector": "img.product-image-photo, img", "attr": "src"},
+                "name": {"selector": "h3, [class*='title'], .product-name", "attr": "text"},
+                "url": {"selector": "self", "attr": "href"},
+                "price": {"selector": "span[class*='text-blue'], .special-price, .price, [class*='price']", "attr": "text"},
+                "image": {"selector": "img", "attr": "src"},
             },
             "detail": {
-                "description": "#product-details",
-                "gallery": ".gallery-placeholder img",
+                "description": "#product-details, [data-slot='card-content'], .description",
+                "gallery": ".gallery-placeholder img, [class*='product-media'] img",
             },
         },
         "techlandbd.com": {
@@ -506,6 +506,37 @@ class UniversalScraper:
                 if not product.get("brand") and ld.get("brand"):
                     product["brand"] = ld["brand"]
 
+            # Detail page meta tags for price
+            if not product.get("price"):
+                for meta_sel in [
+                    "meta[name='product:price:amount']",
+                    "meta[name='og:price:amount']",
+                    "meta[property='product:price:amount']",
+                    "meta[property='og:price:amount']",
+                    "meta[itemprop='price']",
+                ]:
+                    m_el = tree.css_first(meta_sel)
+                    if m_el and m_el.attributes.get("content"):
+                        p_val = normalize_price(m_el.attributes.get("content"))
+                        if p_val and p_val > 0:
+                            product["price"] = p_val
+                            break
+
+            # Detail page DOM price elements
+            if not product.get("price"):
+                for p_node in tree.css(".price, .special-price, .current-price, [class*='price'], [class*='amount'], span, p"):
+                    classes = p_node.attributes.get("class", "")
+                    if "line-through" in classes or "strike" in classes or p_node.tag == "s":
+                        continue
+                    if p_node.parent and (p_node.parent.tag == "s" or "line-through" in p_node.parent.attributes.get("class", "")):
+                        continue
+                    t = p_node.text(strip=True)
+                    if any(c in t for c in ["৳", "Tk", "$", "BDT"]):
+                        p_val = normalize_price(t)
+                        if p_val and p_val > 0:
+                            product["price"] = p_val
+                            break
+
             # Gallery images: only accept real, high-resolution product photos
             gallery_images = []
             for img_el in tree.css(".product-images img, .gallery img, #gallery img, .thumbnails img, img[itemprop='image'], .product-media img, .product-gallery img"):
@@ -582,9 +613,14 @@ class UniversalScraper:
                 if not is_valid_product_name(name):
                     continue
 
-                url_el = node.css_first(fields["url"]["selector"]) if "url" in fields else None
+                if fields.get("url", {}).get("selector") == "self":
+                    url_el = node if getattr(node, "tag", None) == "a" else (node.css_first("a") or node)
+                else:
+                    url_el = node.css_first(fields["url"]["selector"]) if "url" in fields else None
                 link = url_el.attributes.get("href") if url_el else ""
                 full_url = self._absolutize(target_url, link)
+                if not full_url:
+                    continue
 
                 price = None
                 if "price" in fields:
@@ -595,6 +631,19 @@ class UniversalScraper:
                     pt_el = node.css_first(fields["price_text"]["selector"])
                     if pt_el:
                         price = normalize_price(pt_el.text())
+                if price is None:
+                    for p_el in node.css("span, div, p"):
+                        classes = p_el.attributes.get("class", "")
+                        if "line-through" in classes or "strike" in classes or p_el.tag == "s":
+                            continue
+                        if p_el.parent and (p_el.parent.tag == "s" or "line-through" in p_el.parent.attributes.get("class", "")):
+                            continue
+                        txt = p_el.text(strip=True)
+                        if any(c in txt for c in ["৳", "Tk", "$", "BDT"]):
+                            p = normalize_price(txt)
+                            if p and p > 0:
+                                price = p
+                                break
 
                 img_node = node.css_first(fields["image"]["selector"]) if "image" in fields else node.css_first("img")
                 raw_img = extract_node_image(img_node)
@@ -626,9 +675,24 @@ class UniversalScraper:
             print("[EXTRACT] Running Universal Structured Metadata (JSON-LD) extraction...")
             products = self._extract_jsonld(tree, target_url)
 
+        # Check DOM heuristic cards
+        dom_products = self._extract_heuristic_cards(tree, target_url)
+
         if not products:
             print("[EXTRACT] Running Universal DOM Card & Price Heuristic extraction...")
-            products = self._extract_heuristic_cards(tree, target_url)
+            products = dom_products
+        elif dom_products:
+            # If JSON-LD products have missing prices or images, enrich them from matching DOM cards
+            dom_by_url = {re.sub(r"https?://(www\.)?", "", p.get("url") or "").rstrip("/"): p for p in dom_products if p.get("url")}
+            dom_by_name = {p["name"].lower()[:25]: p for p in dom_products if p.get("name")}
+            for p in products:
+                norm_u = re.sub(r"https?://(www\.)?", "", p.get("url") or "").rstrip("/")
+                match = dom_by_url.get(norm_u) or dom_by_name.get(p.get("name", "").lower()[:25])
+                if match:
+                    if not p.get("price") and match.get("price"):
+                        p["price"] = match["price"]
+                    if not p.get("image") and match.get("image"):
+                        p["image"] = match["image"]
 
         print(f"[EXTRACT] Discovered {len(products)} initial product listings.")
 
