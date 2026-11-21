@@ -153,6 +153,44 @@ class DataCleaner:
         missing_cells = int(df.isna().sum().sum())
         completeness = round((1 - (missing_cells / max(1, total_cells))) * 100, 1)
 
+        def get_strategy(col, dtype_name):
+            if col == "price":
+                return {
+                    "strategy": "ML Regression (Random Forest)",
+                    "technique": "Imputed via trained Random Forest Regressor & median fallback using technical specs and brand distributions.",
+                    "status": "ML Imputed"
+                }
+            elif col in ["rating", "rating_count"]:
+                return {
+                    "strategy": "Numerical Baseline Normalization",
+                    "technique": "Unobserved user reviews defaulted to 0.0 rating / 0 count to preserve numeric scale without bias.",
+                    "status": "Zero-fill Default"
+                }
+            elif col in ["brand", "availability"]:
+                return {
+                    "strategy": "Categorical Canonical Mapping",
+                    "technique": "Standardized via website profile accelerator or mapped to canonical categories (e.g. InStock, Unknown).",
+                    "status": "Standardized"
+                }
+            elif col in ["ram_gb", "storage", "size", "capacity", "power", "battery"]:
+                return {
+                    "strategy": "Specification Table Regex Extraction",
+                    "technique": "Mined from product description and technical specs table; missing entries defaulted to 0.0 for ML pipeline.",
+                    "status": "Extracted & Filled"
+                }
+            elif col.startswith("is_") or col.startswith("has_"):
+                return {
+                    "strategy": "Boolean Keyword Feature Engineering",
+                    "technique": "Derived via domain-specific vocabulary matching against titles, specifications, and descriptions.",
+                    "status": "Engineered"
+                }
+            else:
+                return {
+                    "strategy": "Text Normalization & Cleansing",
+                    "technique": "HTML stripped, whitespace trimmed, and standardized to clean text strings.",
+                    "status": "Sanitized"
+                }
+
         missing_by_col = []
         columns_meta = []
         for col in df.columns:
@@ -168,10 +206,15 @@ class DataCleaner:
                     "Boolean" if pd.api.types.is_bool_dtype(df[col]) else "String"
                 )
             )
+            strat = get_strategy(col, dtype_name)
             columns_meta.append({
                 "name": col,
                 "type": dtype_name,
                 "missing": missing_count,
+                "missingPercent": round((missing_count / max(1, len(df))) * 100, 1),
+                "strategy": strat["strategy"],
+                "technique": strat["technique"],
+                "status": strat["status"],
             })
 
         # Sort missingData by highest missing count
