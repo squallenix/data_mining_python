@@ -48,6 +48,108 @@ def clean_text(text):
     return re.sub(r"\s+", " ", cleaned).strip()
 
 
+def is_valid_product_image(url: str) -> bool:
+    """Rejects SVG icons, UI badges, tracking pixels, logos, and promotional hero banners."""
+    if not url:
+        return False
+    u = str(url).strip().lower()
+
+    if u.startswith("data:") or "1x1" in u or "pixel" in u or "spacer" in u:
+        return False
+
+    if u.endswith(".svg") or any(t in u for t in [
+        "/images/logo/", "/footer/", "photos.svg", "customer.svg", "icon", "badge",
+        "payment", "wishlist", "cart.svg", "star.svg", "rating.svg", "spinner", "loader"
+    ]):
+        return False
+
+    banner_tokens = [
+        "home+banner", "home-banner", "herobanner", "hero-banner", "main-slider",
+        "slider-banner", "advertisement", "promo-banner", "1920x570", "1920x", "banner/"
+    ]
+    if any(token in u for token in banner_tokens):
+        return False
+
+    valid_exts = (".jpg", ".jpeg", ".png", ".webp", ".avif")
+    is_cdn = any(cdn in u for cdn in ["cdn.shopify", "cloudinary", "img.", "/image/", "/storage/", "/products/", "/media/", "/upload/"])
+    if not any(u.split("?")[0].endswith(ext) for ext in valid_exts) and not is_cdn:
+        return False
+
+    return True
+
+
+def extract_node_image(node) -> str | None:
+    """Extracts the cleanest, highest-resolution product image from an element or img node,
+    supporting lazy-load attributes, srcset, data-zoom, and thumbnail upscaling."""
+    if not node:
+        return None
+
+    img = node if getattr(node, "tag", None) == "img" else node.css_first("img")
+    if not img:
+        return None
+
+    candidates = [
+        img.attributes.get("data-zoom-image"),
+        img.attributes.get("data-zoom"),
+        img.attributes.get("data-high-res"),
+        img.attributes.get("data-original"),
+        img.attributes.get("data-lazy-src"),
+        img.attributes.get("data-lazy"),
+        img.attributes.get("data-src"),
+        img.attributes.get("data-srcset"),
+        img.attributes.get("srcset"),
+        img.attributes.get("src"),
+    ]
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        url = candidate.strip()
+        if "," in url:
+            parts = [p.strip().split(" ")[0].strip() for p in url.split(",") if p.strip()]
+            for part in reversed(parts):
+                if is_valid_product_image(part):
+                    return part
+        elif " " in url:
+            first = url.split(" ")[0].strip()
+            if is_valid_product_image(first):
+                return first
+        elif is_valid_product_image(url):
+            return url
+
+    return None
+
+
+def upgrade_image_resolution(url: str) -> str:
+    """Automatically converts tiny thumbnail URLs to high-resolution display images."""
+    if not url:
+        return url
+
+    if "cdn.shopify.com" in url or "/cdn/shop/" in url:
+        return re.sub(r"_(?:50x50|100x100|150x150|small|thumb|compact)\.", "_800x800.", url)
+
+    if "startech.com.bd" in url or "/image/cache/" in url:
+        return re.sub(r"-\d+x\d+(\.\w+)$", r"-500x500\1", url)
+
+    return re.sub(r"-\d{2,4}x\d{2,4}(\.(?:jpg|jpeg|png|webp))$", r"\1", url, flags=re.I)
+
+
+def is_valid_product_name(name: str) -> bool:
+    """Rejects non-product headings like 'slide 1', 'banner', 'view details'."""
+    if not name or len(name.strip()) < 4:
+        return False
+    n = name.strip().lower()
+    junk = [
+        "slide", "slide 1", "slide 2", "slide 3", "slide 4", "banner", "hero",
+        "view all", "view details", "read more", "learn more", "add to cart",
+        "buy now", "pre-order", "shop now", "see more", "terms & conditions",
+        "privacy policy", "contact us", "about us", "quick view"
+    ]
+    if n in junk or re.match(r"^slide\s*\d+$", n):
+        return False
+    return True
+
+
 class UniversalScraper:
     """Universal e-commerce scraper supporting structured metadata, heuristic DOM parsing,
     and optimized preset profiles for popular sites."""
@@ -165,10 +267,21 @@ class UniversalScraper:
             availability = availability.split("/")[-1]
 
         image = item.get("image")
+        image_url = None
         if isinstance(image, list):
-            image = image[0] if image else None
+            for img in image:
+                cand = img.get("url") if isinstance(img, dict) else str(img)
+                if is_valid_product_image(cand):
+                    image_url = cand
+                    break
         elif isinstance(image, dict):
-            image = image.get("url")
+            cand = image.get("url")
+            if is_valid_product_image(cand):
+                image_url = cand
+        elif isinstance(image, str) and is_valid_product_image(image):
+            image_url = image
+
+        final_image = upgrade_image_resolution(self._absolutize(base_url, image_url)) if image_url else None
 
         brand = item.get("brand")
         if isinstance(brand, dict):
@@ -179,7 +292,7 @@ class UniversalScraper:
             "name": name,
             "price": price,
             "url": url,
-            "image": self._absolutize(base_url, image) if image else None,
+            "image": final_image,
             "brand": str(brand) if brand else None,
             "description": clean_text(item.get("description", "")),
             "availability": availability or "InStock",
@@ -236,24 +349,20 @@ class UniversalScraper:
             if not title:
                 title = clean_text(a.text())
 
-            # Skip navigation links or buttons
-            if not title or len(title) < 3 or title.lower() in ("add to cart", "buy now", "view details", "pre-order", "quick view"):
+            # Skip navigation links, buttons, and slide banners
+            if not is_valid_product_name(title):
                 continue
 
             seen_urls.add(full_url)
 
-            # Extract image
-            img_node = card.css_first("img")
+            # Extract image (prioritizing real product image over badges/icons)
             img_url = None
-            if img_node:
-                img_url = (
-                    img_node.attributes.get("src")
-                    or img_node.attributes.get("data-src")
-                    or img_node.attributes.get("srcset")
-                )
-                if img_url and " " in img_url:
-                    img_url = img_url.split(" ")[0].strip()
-            full_image = self._absolutize(base_url, img_url) if img_url else None
+            for img_el in card.css("img"):
+                cand = extract_node_image(img_el)
+                if cand and is_valid_product_image(cand):
+                    img_url = cand
+                    break
+            full_image = upgrade_image_resolution(self._absolutize(base_url, img_url)) if img_url else None
 
             # Extract price
             price = None
@@ -325,7 +434,7 @@ class UniversalScraper:
                     or (node if node.tag == "a" else node.css_first("a"))
                 )
                 name = clean_text(name_el.text(strip=True)) if name_el else ""
-                if not name or len(name) < 3 or name.lower() in ("add to cart", "buy now", "pre-order"):
+                if not is_valid_product_name(name):
                     continue
 
                 link_el = node if node.tag == "a" else (node.css_first("a") or name_el)
@@ -346,17 +455,13 @@ class UniversalScraper:
                 if price is None:
                     price = normalize_price(node.text())
 
-                img_el = node.css_first("img")
                 img_url = None
-                if img_el:
-                    img_url = (
-                        img_el.attributes.get("src")
-                        or img_el.attributes.get("data-src")
-                        or img_el.attributes.get("srcset")
-                    )
-                    if img_url and " " in img_url:
-                        img_url = img_url.split(" ")[0].strip()
-                full_image = self._absolutize(base_url, img_url) if img_url else None
+                for img_el in node.css("img"):
+                    cand = extract_node_image(img_el)
+                    if cand and is_valid_product_image(cand):
+                        img_url = cand
+                        break
+                full_image = upgrade_image_resolution(self._absolutize(base_url, img_url)) if img_url else None
 
                 specs = {}
                 for li in node.css(".short-description li, ul li"):
@@ -401,17 +506,23 @@ class UniversalScraper:
                 if not product.get("brand") and ld.get("brand"):
                     product["brand"] = ld["brand"]
 
-            # Gallery images
-            images = []
-            for img in tree.css(".product-images img, .gallery img, #gallery img, .thumbnails img, img[itemprop='image']"):
-                src = img.attributes.get("src") or img.attributes.get("data-src") or img.attributes.get("srcset")
-                if src and " " in src:
-                    src = src.split(" ")[0].strip()
-                if src:
-                    full_src = self._absolutize(url, src)
-                    if full_src and full_src not in images:
-                        images.append(full_src)
-            product["images"] = images if images else ([product["image"]] if product.get("image") else [])
+            # Gallery images: only accept real, high-resolution product photos
+            gallery_images = []
+            for img_el in tree.css(".product-images img, .gallery img, #gallery img, .thumbnails img, img[itemprop='image'], .product-media img, .product-gallery img"):
+                src = extract_node_image(img_el)
+                if src and is_valid_product_image(src):
+                    full_src = upgrade_image_resolution(self._absolutize(url, src))
+                    if full_src and full_src not in gallery_images:
+                        gallery_images.append(full_src)
+
+            # Preserve valid listing image if gallery didn't find anything
+            if gallery_images:
+                product["images"] = gallery_images
+                product["image"] = gallery_images[0]
+            elif product.get("image") and is_valid_product_image(product.get("image")):
+                product["images"] = [product["image"]]
+            else:
+                product["images"] = []
 
             # Description
             desc_el = tree.css_first(".full-description, #specification, #tab-description, [itemprop='description'], .product-description")
@@ -468,7 +579,7 @@ class UniversalScraper:
                 fields = preset["fields"]
                 name_el = node.css_first(fields["name"]["selector"]) if "name" in fields else None
                 name = clean_text(name_el.text()) if name_el else ""
-                if not name:
+                if not is_valid_product_name(name):
                     continue
 
                 url_el = node.css_first(fields["url"]["selector"]) if "url" in fields else None
@@ -485,9 +596,9 @@ class UniversalScraper:
                     if pt_el:
                         price = normalize_price(pt_el.text())
 
-                img_el = node.css_first(fields["image"]["selector"]) if "image" in fields else None
-                img = img_el.attributes.get("src") if img_el else None
-                full_image = self._absolutize(target_url, img) if img else None
+                img_node = node.css_first(fields["image"]["selector"]) if "image" in fields else node.css_first("img")
+                raw_img = extract_node_image(img_node)
+                full_image = upgrade_image_resolution(self._absolutize(target_url, raw_img)) if raw_img else None
 
                 specs = {}
                 for spec_key, spec_sel in preset.get("spec_selectors", {}).items():

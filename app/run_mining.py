@@ -9,7 +9,7 @@ from pipeline.cleaner import DataCleaner
 from pipeline.exporter import DatasetExporter
 from pipeline.http_client import EcommerceHttpClient
 from pipeline.miner import DataMiner
-from pipeline.universal_scraper import UniversalScraper
+from pipeline.universal_scraper import UniversalScraper, is_valid_product_image
 
 
 async def run_pipeline(target_url: str, backend_url: str = "http://localhost:8001", max_products: int = 30, features: str = None):
@@ -60,11 +60,29 @@ async def run_pipeline(target_url: str, backend_url: str = "http://localhost:800
         for _, row in df_mined.iterrows():
             images_list = []
             if isinstance(row.get("images"), list) and row.get("images"):
-                for i, img_url in enumerate(row["images"]):
-                    if img_url:
-                        images_list.append({"url": str(img_url), "alt": str(row["name"]), "isPrimary": i == 0, "sortOrder": i})
-            elif row.get("image"):
-                images_list.append({"url": str(row["image"]), "alt": str(row["name"]), "isPrimary": True, "sortOrder": 0})
+                for img_url in row["images"]:
+                    if img_url and is_valid_product_image(str(img_url)):
+                        images_list.append({
+                            "url": str(img_url),
+                            "alt": str(row["name"]),
+                            "isPrimary": len(images_list) == 0,
+                            "sortOrder": len(images_list),
+                        })
+            if not images_list and row.get("image") and is_valid_product_image(str(row["image"])):
+                images_list.append({
+                    "url": str(row["image"]),
+                    "alt": str(row["name"]),
+                    "isPrimary": True,
+                    "sortOrder": 0,
+                })
+
+            if not images_list:
+                images_list.append({
+                    "url": "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=600&auto=format&fit=crop&q=80",
+                    "alt": str(row["name"]),
+                    "isPrimary": True,
+                    "sortOrder": 0,
+                })
 
             payload = {
                 "name": str(row["name"]),
