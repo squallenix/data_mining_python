@@ -1,4 +1,28 @@
-/.freebuff
-/data_mining_backend
-data_mining_backend
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Scraper cache & runtime data
+.freebuff/
 data/
+app/data/
+*.csv
+*.html
+latest_analytics.json
+
+# Local files & OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp

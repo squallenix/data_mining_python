@@ -1,0 +1,426 @@
+{
+  "sourceDomain": "pcbstore.com.bd",
+  "targetUrl": "https://pcbstore.com.bd/laptop/all-laptop",
+  "csvPath": "E:\\Code\\data_mining_python\\app\\data\\pcbstore_com_bd_products_20261121-194848.csv",
+  "cleaning": {
+    "summary": {
+      "totalRecords": 10,
+      "totalColumns": 26,
+      "missingValues": 57,
+      "duplicateRecords": 0,
+      "completeness": 79.6,
+      "outliersCapped": 0
+    },
+    "missingData": [
+      {
+        "column": "Rating",
+        "missing": 10
+      },
+      {
+        "column": "Rating Count",
+        "missing": 10
+      },
+      {
+        "column": "Capacity",
+        "missing": 10
+      },
+      {
+        "column": "Battery",
+        "missing": 10
+      },
+      {
+        "column": "Power",
+        "missing": 9
+      },
+      {
+        "column": "Ram Gb",
+        "missing": 4
+      },
+      {
+        "column": "Storage",
+        "missing": 3
+      },
+      {
+        "column": "Price",
+        "missing": 1
+      }
+    ],
+    "columns": [
+      {
+        "name": "name",
+        "type": "String",
+        "missing": 0
+      },
+      {
+        "name": "productSlug",
+        "type": "String",
+        "missing": 0
+      },
+      {
+        "name": "price",
+        "type": "Float",
+        "missing": 1
+      },
+      {
+        "name": "image",
+        "type": "String",
+        "missing": 0
+      },
+      {
+        "name": "url",
+        "type": "String",
+        "missing": 0
+      },
+      {
+        "name": "source_domain",
+        "type": "String",
+        "missing": 0
+      },
+      {
+        "name": "source_url",
+        "type": "String",
+        "missing": 0
+      },
+      {
+        "name": "availability",
+        "type": "String",
+        "missing": 0
+      },
+      {
+        "name": "description",
+        "type": "String",
+        "missing": 0
+      },
+      {
+        "name": "rating",
+        "type": "Float",
+        "missing": 10
+      },
+      {
+        "name": "rating_count",
+        "type": "Float",
+        "missing": 10
+      },
+      {
+        "name": "size",
+        "type": "Float",
+        "missing": 0
+      },
+      {
+        "name": "capacity",
+        "type": "Float",
+        "missing": 10
+      },
+      {
+        "name": "power",
+        "type": "Float",
+        "missing": 9
+      },
+      {
+        "name": "storage",
+        "type": "Float",
+        "missing": 3
+      },
+      {
+        "name": "battery",
+        "type": "Float",
+        "missing": 10
+      },
+      {
+        "name": "ram_gb",
+        "type": "Float",
+        "missing": 4
+      },
+      {
+        "name": "is_smart",
+        "type": "Boolean",
+        "missing": 0
+      },
+      {
+        "name": "is_wireless",
+        "type": "Boolean",
+        "missing": 0
+      },
+      {
+        "name": "is_inverter",
+        "type": "Boolean",
+        "missing": 0
+      },
+      {
+        "name": "is_hd",
+        "type": "Boolean",
+        "missing": 0
+      },
+      {
+        "name": "is_gaming",
+        "type": "Boolean",
+        "missing": 0
+      },
+      {
+        "name": "is_touchscreen",
+        "type": "Boolean",
+        "missing": 0
+      },
+      {
+        "name": "is_oled",
+        "type": "Boolean",
+        "missing": 0
+      },
+      {
+        "name": "has_ssd",
+        "type": "Boolean",
+        "missing": 0
+      },
+      {
+        "name": "brand",
+        "type": "String",
+        "missing": 0
+      }
+    ],
+    "preview": [
+      {
+        "name": "Walton Passion BX710U Core i7 10th Gen 15.6\" FHD Laptop",
+        "brand": "Walton",
+        "price": 59500.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "Walton Passion BX510U Core i5 10th Gen 15.6\" FHD Laptop",
+        "brand": "Walton",
+        "price": 49500.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "ASUS ExpertBook P1 P1503CVA Core i3 13th Gen 15.6\" FHD Laptop",
+        "brand": "ASUS",
+        "price": 65000.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "MSI Modern 14 F13MG Core I3 13th Gen 14\" FHD Laptop",
+        "brand": "MSI",
+        "price": 55500.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "Asus ExpertBook B1 B1503CVA Core 5 120U 16GB RAM 15.6\" FHD Laptop",
+        "brand": "ASUS",
+        "price": 90500.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "Lenovo IdeaPad Slim 3 15IRH10 Core i7 13th Gen 15.3\" WUXGA Laptop",
+        "brand": "Lenovo",
+        "price": 90000.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "ASUS Vivobook Go 15 L1504FA Ryzen 5 7520U 8GB Ram 15.6\" FHD Laptop",
+        "brand": "ASUS",
+        "price": 62590.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "MacBook Air M3 13 inch 16/256GB Midnight",
+        "brand": "Apple",
+        "price": 119000.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "Machenike L15 Core i5 12th Gen RTX 3050 Ti 4GB Graphics 15.6\" FHD 144Hz Gaming Laptop",
+        "brand": "Machenike",
+        "price": 114900.0,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      },
+      {
+        "name": "ASUS Vivobook Go 15 E1504TA-BQ199W Intel N150 8GB 15.6\" FHD Laptop",
+        "brand": "ASUS",
+        "price": null,
+        "availability": "InStock",
+        "source_domain": "pcbstore.com.bd"
+      }
+    ]
+  },
+  "prediction": {
+    "modelComparison": [
+      {
+        "model": "Linear Regression",
+        "r2": -1867.679,
+        "mae": 724268.97
+      },
+      {
+        "model": "Random Forest Regressor",
+        "r2": -0.46,
+        "mae": 32244.77
+      }
+    ],
+    "classificationComparison": [
+      {
+        "model": "Logistic Regression",
+        "accuracy": 66.7
+      },
+      {
+        "model": "Random Forest Classifier",
+        "accuracy": 66.7
+      }
+    ],
+    "priceDistribution": [
+      {
+        "range": "0-15k",
+        "count": 0
+      },
+      {
+        "range": "15-30k",
+        "count": 0
+      },
+      {
+        "range": "30-50k",
+        "count": 1
+      },
+      {
+        "range": "50-75k",
+        "count": 5
+      },
+      {
+        "range": "75-100k",
+        "count": 2
+      },
+      {
+        "range": "100k+",
+        "count": 2
+      }
+    ],
+    "confusionMatrix": [
+      {
+        "actual": "Real",
+        "real": 2,
+        "fake": 0
+      },
+      {
+        "actual": "Fake",
+        "real": 1,
+        "fake": 0
+      }
+    ],
+    "elbowCurve": [
+      {
+        "k": 2,
+        "inertia": 34.3
+      },
+      {
+        "k": 3,
+        "inertia": 19.7
+      },
+      {
+        "k": 4,
+        "inertia": 11.7
+      },
+      {
+        "k": 5,
+        "inertia": 6.3
+      },
+      {
+        "k": 6,
+        "inertia": 2.6
+      },
+      {
+        "k": 7,
+        "inertia": 1.2
+      },
+      {
+        "k": 8,
+        "inertia": 0.3
+      }
+    ],
+    "clusters": [
+      {
+        "rating": null,
+        "price": 59500.0,
+        "cluster": "Cluster 0",
+        "name": "Walton Passion BX710U Core i7 10th Gen 1"
+      },
+      {
+        "rating": null,
+        "price": 49500.0,
+        "cluster": "Cluster 0",
+        "name": "Walton Passion BX510U Core i5 10th Gen 1"
+      },
+      {
+        "rating": null,
+        "price": 65000.0,
+        "cluster": "Cluster 0",
+        "name": "ASUS ExpertBook P1 P1503CVA Core i3 13th"
+      },
+      {
+        "rating": null,
+        "price": 55500.0,
+        "cluster": "Cluster 0",
+        "name": "MSI Modern 14 F13MG Core I3 13th Gen 14\""
+      },
+      {
+        "rating": null,
+        "price": 90500.0,
+        "cluster": "Cluster 0",
+        "name": "Asus ExpertBook B1 B1503CVA Core 5 120U "
+      },
+      {
+        "rating": null,
+        "price": 90000.0,
+        "cluster": "Cluster 0",
+        "name": "Lenovo IdeaPad Slim 3 15IRH10 Core i7 13"
+      },
+      {
+        "rating": null,
+        "price": 62590.0,
+        "cluster": "Cluster 0",
+        "name": "ASUS Vivobook Go 15 L1504FA Ryzen 5 7520"
+      },
+      {
+        "rating": null,
+        "price": 119000.0,
+        "cluster": "Cluster 1",
+        "name": "MacBook Air M3 13 inch 16/256GB Midnight"
+      },
+      {
+        "rating": null,
+        "price": 114900.0,
+        "cluster": "Cluster 0",
+        "name": "Machenike L15 Core i5 12th Gen RTX 3050 "
+      },
+      {
+        "rating": null,
+        "price": 70700.0,
+        "cluster": "Cluster 2",
+        "name": "ASUS Vivobook Go 15 E1504TA-BQ199W Intel"
+      }
+    ],
+    "availableTargets": {
+      "regression": [
+        "price",
+        "rating",
+        "rating_count",
+        "size",
+        "capacity",
+        "power",
+        "storage",
+        "battery",
+        "ram_gb"
+      ],
+      "classification": [
+        "is_hd",
+        "is_gaming",
+        "has_ssd"
+      ]
+    }
+  },
+  "timestamp": "12964.671"
+}
