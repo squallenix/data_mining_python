@@ -2,7 +2,10 @@ import asyncio
 import json
 import re
 from urllib.parse import urljoin, urlparse
-from selectolax.parser import HTMLParser
+try:
+    from selectolax.lexbor import LexborHTMLParser as HTMLParser
+except ImportError:
+    from selectolax.parser import HTMLParser
 import pandas as pd
 from .http_client import EcommerceHttpClient
 
