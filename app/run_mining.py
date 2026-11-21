@@ -149,14 +149,14 @@ async def run_pipeline(target_url: str, backend_url: str = "http://localhost:800
         backend_env = os.environ.get("BACKEND_ANALYTICS_PATH")
         if backend_env:
             backend_analytics_path = Path(backend_env)
+        elif (Path("/app") / "package.json").exists():
+            backend_analytics_path = Path("/app/latest_analytics.json")
+        elif (Path(__file__).resolve().parent.parent.parent / "data_mining_backend" / "package.json").exists():
+            backend_analytics_path = Path(__file__).resolve().parent.parent.parent / "data_mining_backend" / "latest_analytics.json"
+        elif Path("e:/Code/data_mining_backend").exists():
+            backend_analytics_path = Path("e:/Code/data_mining_backend/latest_analytics.json")
         else:
-            candidate = Path(__file__).resolve().parent.parent.parent / "data_mining_backend" / "latest_analytics.json"
-            if candidate.parent.exists():
-                backend_analytics_path = candidate
-            elif Path("latest_analytics.json").exists() or Path(".").resolve().name == "data_mining_backend":
-                backend_analytics_path = Path("latest_analytics.json")
-            else:
-                backend_analytics_path = Path("e:/Code/data_mining_backend/latest_analytics.json")
+            backend_analytics_path = Path.cwd() / "latest_analytics.json"
         try:
             with open(backend_analytics_path, "w", encoding="utf-8") as f:
                 json.dump(sanitized_analytics, f, indent=2)

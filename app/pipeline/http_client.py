@@ -1,4 +1,5 @@
 import asyncio
+import os
 import random
 import time
 from urllib.parse import urlparse
@@ -86,14 +87,27 @@ class EcommerceHttpClient:
             headers={"Content-Type": "application/json"},
         )
 
+        # Optional proxy for bypassing cloud datacenter geo-blocks (e.g. Startech on Render)
+        self.proxy = os.environ.get("SCRAPER_PROXY") or os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+
         # TLS Browser Impersonation session for scraping external e-commerce sites
         self._curl_session = None
         if HAS_CURL_CFFI:
             try:
-                self._curl_session = CurlAsyncSession(impersonate="chrome124")
+                self._curl_session = CurlAsyncSession(
+                    impersonate="chrome124",
+                    proxy=self.proxy if self.proxy else None,
+                )
             except Exception as e:
                 print(f"[HTTP] Note: curl_cffi session init: {e}. Falling back to httpx.")
                 self._curl_session = None
+
+        # Fallback HTTP client for scraping if curl_cffi is unavailable
+        self._scraper_client = httpx.AsyncClient(
+            timeout=timeout,
+            follow_redirects=True,
+            proxy=self.proxy if self.proxy else None,
+        )
 
     async def _pacing(self):
         async with self.limiter:
@@ -130,7 +144,8 @@ class EcommerceHttpClient:
                             await asyncio.sleep(2.0 * attempt)
                             continue
                         raise PermissionError(
-                            f"HTTP 403 Forbidden: {domain} blocked access (anti-bot / Cloudflare security active)."
+                            f"HTTP 403 Forbidden: {domain} blocked access (Cloudflare geo/datacenter protection active). "
+                            "Try another site (e.g. gadgetandgear.com, custommacbd.com, books.toscrape.com) or configure a SCRAPER_PROXY."
                         )
 
                     response.raise_for_status()
@@ -145,7 +160,7 @@ class EcommerceHttpClient:
                 # Method B: Fallback to httpx with rotating realistic browser headers
                 headers = REALISTIC_BROWSER_HEADERS[self._header_idx % len(REALISTIC_BROWSER_HEADERS)]
                 try:
-                    response = await self.client.get(url, headers=headers)
+                    response = await self._scraper_client.get(url, headers=headers)
                     if response.status_code == 429:
                         wait = 10.0
                         print(f"[RETRY] 429 Rate limited on {url} - waiting {wait}s (attempt {attempt}/{self.max_retries})")
@@ -159,7 +174,8 @@ class EcommerceHttpClient:
                             await asyncio.sleep(2.0 * attempt)
                             continue
                         raise PermissionError(
-                            f"HTTP 403 Forbidden: {domain} blocked access (anti-bot / Cloudflare security active)."
+                            f"HTTP 403 Forbidden: {domain} blocked access (Cloudflare geo/datacenter protection active). "
+                            "Try another site (e.g. gadgetandgear.com, custommacbd.com, books.toscrape.com) or configure a SCRAPER_PROXY."
                         )
 
                     response.raise_for_status()
@@ -181,6 +197,11 @@ class EcommerceHttpClient:
         if self._curl_session is not None:
             try:
                 await self._curl_session.close()
+            except Exception:
+                pass
+        if self._scraper_client is not None:
+            try:
+                await self._scraper_client.aclose()
             except Exception:
                 pass
         await self.client.aclose()
