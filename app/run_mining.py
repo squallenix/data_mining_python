@@ -29,7 +29,7 @@ async def run_pipeline(target_url: str, backend_url: str = "http://localhost:800
         print("\n[Stage 1/5] Universal Scraping...")
         records, domain = await scraper.scrape(target_url, max_products=max_products)
         if not records:
-            raise RuntimeError(f"Universal scraper found 0 products at {target_url}")
+            raise RuntimeError(f"Found 0 products at {target_url}. Please ensure the URL points to an e-commerce category or listing page.")
         print(f"[SUCCESS] Scraped {len(records)} products from {domain}")
 
         # Step 2: Data Cleaning & Feature Derivation
@@ -207,7 +207,17 @@ def main():
     parser.add_argument("--features", default=None, help="Comma-separated custom features to derive (e.g. gaming,ssd,oled,touchscreen)")
     args = parser.parse_args()
 
-    asyncio.run(run_pipeline(args.url, args.backend, args.max_products, features=args.features))
+    try:
+        asyncio.run(run_pipeline(args.url, args.backend, args.max_products, features=args.features))
+    except PermissionError as pe:
+        print(f"\n[ERROR] {pe}", flush=True)
+        sys.exit(1)
+    except RuntimeError as re:
+        print(f"\n[ERROR] {re}", flush=True)
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n[ERROR] Pipeline failed: {e}", flush=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
