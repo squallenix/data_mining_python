@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -9,6 +10,9 @@ from sklearn.metrics import accuracy_score, confusion_matrix, mean_absolute_erro
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+# Suppress benign scikit-learn warnings during dynamic model fitting
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 
 class DataMiner:
@@ -34,6 +38,11 @@ class DataMiner:
         if not flag_cols:
             flag_cols = [c for c in ["is_gaming", "is_smart", "is_inverter", "is_touchscreen", "has_ssd"] if c in model_df.columns]
 
+        # Ensure all-NaN numeric columns have safe numerical defaults
+        for c in numeric_cols:
+            if c in model_df.columns and model_df[c].isna().all():
+                model_df[c] = 0.0
+
         # -------------------------------------------------------------
         # 1. Dynamic Regression & Price Imputation
         # -------------------------------------------------------------
@@ -48,8 +57,8 @@ class DataMiner:
             Xr = priced_rows[reg_features]
             yr = priced_rows["price"]
 
-            num_sub = [c for c in reg_features if c in numeric_cols]
-            cat_sub = [c for c in reg_features if c in categorical_cols or c in flag_cols]
+            num_sub = [c for c in reg_features if c in numeric_cols and Xr[c].notna().any()]
+            cat_sub = [c for c in reg_features if (c in categorical_cols or c in flag_cols) and Xr[c].notna().any()]
 
             transformers = []
             if num_sub:
@@ -121,8 +130,8 @@ class DataMiner:
             yc = model_df[clf_target].astype(int)
 
             if yc.nunique() >= 2:
-                num_sub = [c for c in clf_features if c in numeric_cols]
-                cat_sub = [c for c in clf_features if c in categorical_cols]
+                num_sub = [c for c in clf_features if c in numeric_cols and Xc[c].notna().any()]
+                cat_sub = [c for c in clf_features if c in categorical_cols and Xc[c].notna().any()]
 
                 transformers = []
                 if num_sub:
@@ -169,8 +178,8 @@ class DataMiner:
         # -------------------------------------------------------------
         elbow_data = []
         cluster_scatter = []
-        cl_features = list(dict.fromkeys(["price_imputed"] + [c for c in numeric_cols if c in model_df.columns]))
-        X_cl = model_df[cl_features].apply(pd.to_numeric, errors="coerce").fillna(0)
+        cl_features = list(dict.fromkeys(["price_imputed"] + [c for c in numeric_cols if c in model_df.columns and model_df[c].notna().any()]))
+        X_cl = model_df[cl_features if cl_features else ["price_imputed"]].apply(pd.to_numeric, errors="coerce").fillna(0)
 
         if len(X_cl) >= 4 and X_cl.shape[1] >= 1:
             scaler = StandardScaler()

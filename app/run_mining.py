@@ -229,12 +229,15 @@ def main():
         asyncio.run(run_pipeline(args.url, args.backend, args.max_products, features=args.features))
     except PermissionError as pe:
         print(f"\n[ERROR] {pe}", flush=True)
+        print(f"{pe}", file=sys.stderr, flush=True)
         sys.exit(1)
     except RuntimeError as re:
         print(f"\n[ERROR] {re}", flush=True)
+        print(f"{re}", file=sys.stderr, flush=True)
         sys.exit(1)
     except Exception as e:
         print(f"\n[ERROR] Pipeline failed: {e}", flush=True)
+        print(f"Pipeline failed: {e}", file=sys.stderr, flush=True)
         sys.exit(1)
 
 

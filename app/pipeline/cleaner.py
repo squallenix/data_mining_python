@@ -54,7 +54,18 @@ class DataCleaner:
         for rec in records:
             name = rec.get("name") or ""
             desc = rec.get("description") or ""
-            combined_text = f"{name} {desc}".lower()
+            specs_dict = rec.get("specifications") if isinstance(rec.get("specifications"), dict) else {}
+            specs_text = " ".join(f"{k} {v}" for k, v in specs_dict.items())
+            combined_text = f"{name} {desc} {specs_text}".lower()
+
+            def _clean_num(val, default=0.0):
+                if val is None:
+                    return default
+                try:
+                    num = float(val)
+                    return default if np.isnan(num) else num
+                except (ValueError, TypeError):
+                    return default
 
             row = {
                 "name": name,
@@ -67,9 +78,9 @@ class DataCleaner:
                 "source_url": rec.get("source_url") or "",
                 "availability": rec.get("availability") or "InStock",
                 "description": desc,
-                "specifications": rec.get("specifications") or {},
-                "rating": pd.to_numeric(rec.get("rating"), errors="coerce") or 0.0,
-                "rating_count": pd.to_numeric(rec.get("rating_count"), errors="coerce") or 0,
+                "specifications": specs_dict,
+                "rating": _clean_num(rec.get("rating"), 0.0),
+                "rating_count": int(_clean_num(rec.get("rating_count"), 0)),
             }
 
             # Derive universal numeric and boolean features
